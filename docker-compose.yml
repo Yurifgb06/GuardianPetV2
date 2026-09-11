@@ -1,0 +1,42 @@
+services:
+  oracle-db:
+    image: gvenzl/oracle-free:latest
+    container_name: oracle-db
+    environment:
+      # Public development defaults; override for any shared environment.
+      ORACLE_PASSWORD: "${ORACLE_PASSWORD:-123456}"
+      APP_USER: "${APP_USER:-GuardianPet}"
+      APP_USER_PASSWORD: "${APP_USER_PASSWORD:-123456}"
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    networks:
+      - guardianpet-network
+
+  guardianpet-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: guardianpet-api
+    depends_on:
+      - oracle-db
+    environment:
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__OracleConnection: "${ConnectionStrings__OracleConnection:-User Id=${APP_USER:-GuardianPet};Password=${APP_USER_PASSWORD:-123456};Data Source=oracle-db:1521/FREEPDB1}"
+      Jwt__Key: "${Jwt__Key:-GuardianPet-Development-Only-Replace-This-Key-2026!}"
+      Jwt__Issuer: "${Jwt__Issuer:-GuardianPet}"
+      Jwt__Audience: "${Jwt__Audience:-GuardianPet}"
+      Jwt__ExpirationMinutes: "${Jwt__ExpirationMinutes:-60}"
+    ports:
+      - "8080:8080"
+    networks:
+      - guardianpet-network
+
+volumes:
+  oracle-data:
+
+networks:
+  guardianpet-network:
+    driver: bridge
