@@ -4,10 +4,11 @@ using GuardianPet.Enums;
 using GuardianPet.Exceptions;
 using GuardianPet.Models;
 using GuardianPet.Repositories;
+using GuardianPet.DTOs.Query;
 
 namespace GuardianPet.Services
 {
-    public class VeterinarianService
+    public class VeterinarianService : IVeterinarianService
     {
         private readonly IVeterinarianRepository _veterinarianRepository;
 
@@ -36,6 +37,22 @@ namespace GuardianPet.Services
 
             var savedVeterinarian = await _veterinarianRepository.CreateAsync(veterinarian);
             return ToResponse(savedVeterinarian);
+        }
+
+        public Task<long> CountAsync(VeterinarianQueryDTO options)
+        {
+            options.EnsureValid();
+            return _veterinarianRepository.CountAsync(options);
+        }
+
+        public async Task<List<VeterinarianResponseDTO>> QueryAsync(VeterinarianQueryDTO options)
+        {
+            options.EnsureValid();
+            if (options.Page is null && options.PageSize is null && options.SortBy is null && options.SortDirection is null
+                && options.Name is null && options.Specialty is null)
+                return await FindAllAsync();
+            var records = await _veterinarianRepository.QueryAsync(options);
+            return records.Select(ToResponse).ToList();
         }
 
         public async Task<List<VeterinarianResponseDTO>> FindAllAsync()

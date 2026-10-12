@@ -1,6 +1,7 @@
 ﻿using GuardianPet.Data;
 using GuardianPet.Models;
 using Microsoft.EntityFrameworkCore;
+using GuardianPet.DTOs.Query;
 
 namespace GuardianPet.Repositories
 {
@@ -11,6 +12,34 @@ namespace GuardianPet.Repositories
         public UserRepository(AppDbContext context)
         {
             _context = context;
+        }
+
+        private IQueryable<User> FilteredQuery(UserQueryDTO options)
+        {
+            var query = _context.Users.AsQueryable();
+            if (options.Name is not null) query = query.Where(x => x.Name.ToLower().Contains(options.Name.ToLower()));
+            if (options.Email is not null) query = query.Where(x => x.Email.ToLower() == options.Email.ToLower());
+            return query;
+        }
+
+        public Task<long> CountAsync(UserQueryDTO options)
+        {
+            options.EnsureValid();
+            return FilteredQuery(options).LongCountAsync();
+        }
+
+        public async Task<List<User>> QueryAsync(UserQueryDTO options)
+        {
+            options.EnsureValid();
+            var query = FilteredQuery(options);
+            query = options.SortBy?.ToLowerInvariant() switch
+            {
+                "name" => CollectionQuery.Apply(query, options, x => x.Name, x => x.Id),
+                "email" => CollectionQuery.Apply(query, options, x => x.Email, x => x.Id),
+                "phone" => CollectionQuery.Apply(query, options, x => x.Phone, x => x.Id),
+                _ => CollectionQuery.Apply(query, options, x => x.Id, x => x.Id)
+            };
+            return await query.ToListAsync();
         }
 
         public async Task<List<User>> FindAllAsync()
@@ -31,9 +60,7 @@ namespace GuardianPet.Repositories
 
         public async Task<List<User>> SearchByNameAsync(string name)
         {
-            return await _context.Users
-                .Where(u => u.Name.ToLower().Contains(name.ToLower()))
-                .ToListAsync();
+            return await QueryAsync(new UserQueryDTO { Name = name });
         }
 
         public async Task<bool> ExistsByEmailAsync(string email)

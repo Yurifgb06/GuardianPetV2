@@ -4,10 +4,11 @@ using GuardianPet.Exceptions;
 using GuardianPet.Models;
 using GuardianPet.Repositories;
 using Microsoft.AspNetCore.Identity;
+using GuardianPet.DTOs.Query;
 
 namespace GuardianPet.Services
 {
-    public class UserService
+    public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
         private readonly IPasswordHasher<User> _passwordHasher;
@@ -37,6 +38,22 @@ namespace GuardianPet.Services
             user.Password = _passwordHasher.HashPassword(user, dto.Password);
             var savedUser = await _userRepository.CreateAsync(user);
             return ToResponse(savedUser);
+        }
+
+        public Task<long> CountAsync(UserQueryDTO options)
+        {
+            options.EnsureValid();
+            return _userRepository.CountAsync(options);
+        }
+
+        public async Task<List<UserResponseDTO>> QueryAsync(UserQueryDTO options)
+        {
+            options.EnsureValid();
+            if (options.Page is null && options.PageSize is null && options.SortBy is null && options.SortDirection is null
+                && options.Name is null && options.Email is null)
+                return await FindAllAsync();
+            var records = await _userRepository.QueryAsync(options);
+            return records.Select(ToResponse).ToList();
         }
 
         public async Task<List<UserResponseDTO>> FindAllAsync()

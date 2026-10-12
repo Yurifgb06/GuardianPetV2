@@ -5,10 +5,11 @@ using GuardianPet.Exceptions;
 using GuardianPet.Models;
 using GuardianPet.Observability;
 using GuardianPet.Repositories;
+using GuardianPet.DTOs.Query;
 
 namespace GuardianPet.Services
 {
-    public class PetService
+    public class PetService : IPetService
     {
         private readonly IPetRepository _petRepository;
 
@@ -33,6 +34,23 @@ namespace GuardianPet.Services
 
             var savedPet = await _petRepository.CreateAsync(pet);
             return ToResponse(savedPet);
+        }
+
+        public Task<long> CountAsync(PetQueryDTO options)
+        {
+            options.EnsureValid();
+            return _petRepository.CountAsync(options);
+        }
+
+        public async Task<List<PetResponseDTO>> QueryAsync(PetQueryDTO options)
+        {
+            options.EnsureValid();
+            if (options.Page is null && options.PageSize is null && options.SortBy is null && options.SortDirection is null
+                && options.Species is null && options.PetSize is null)
+                return await FindAllAsync();
+            using var activity = GuardianPetTelemetry.StartActivity("service", "search", "pet");
+            var records = await _petRepository.QueryAsync(options);
+            return records.Select(ToResponse).ToList();
         }
 
         public async Task<List<PetResponseDTO>> FindAllAsync()

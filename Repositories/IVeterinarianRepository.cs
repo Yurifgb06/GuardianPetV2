@@ -1,10 +1,13 @@
 ﻿using GuardianPet.Enums;
 using GuardianPet.Models;
+using GuardianPet.DTOs.Query;
 
 namespace GuardianPet.Repositories
 {
     public interface IVeterinarianRepository
     {
+        Task<long> CountAsync(VeterinarianQueryDTO options);
+        Task<List<Veterinarian>> QueryAsync(VeterinarianQueryDTO options);
         Task<List<Veterinarian>> FindAllAsync();
         Task<Veterinarian?> FindByIdAsync(long id);
         Task<List<Veterinarian>> SearchByNameAsync(string name);

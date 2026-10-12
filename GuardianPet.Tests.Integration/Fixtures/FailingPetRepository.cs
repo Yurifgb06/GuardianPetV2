@@ -5,6 +5,8 @@ namespace GuardianPet.Tests.Integration.Fixtures;
 // Used only by a derived test host. No database outage or production endpoint.
 public sealed class FailingPetRepository : IPetRepository
 {
+    public Task<long> CountAsync(GuardianPet.DTOs.Query.PetQueryDTO options) => throw new NotSupportedException();
+    public Task<List<Pet>> QueryAsync(GuardianPet.DTOs.Query.PetQueryDTO options) => throw new InvalidOperationException("Controlled repository failure");
     public Task<List<Pet>> FindAllAsync() => throw new InvalidOperationException("Controlled repository failure");
     public Task<Pet?> FindByIdAsync(long id) => throw new NotSupportedException();
     public Task<List<Pet>> SearchAsync(string? species, PetSizeEnum? size) => throw new NotSupportedException();

@@ -18,6 +18,7 @@ public sealed class CorrelationIdMiddleware
         var values = context.Request.Headers[HeaderName];
         var suppliedId = values.Count == 1 ? values[0] : null;
         var correlationId = IsValid(suppliedId) ? suppliedId! : Guid.NewGuid().ToString("D");
+        context.Items["CorrelationId"] = correlationId;
 
         context.Response.OnStarting(() =>
         {

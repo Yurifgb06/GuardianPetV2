@@ -4,6 +4,8 @@ using GuardianPet.DTOs.Response;
 using GuardianPet.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using GuardianPet.DTOs.Query;
+using GuardianPet.Presentation;
 
 namespace GuardianPet.Controllers
 {
@@ -12,9 +14,9 @@ namespace GuardianPet.Controllers
     [Route("api/consultations")]
     public class ConsultationsController : ControllerBase
     {
-        private readonly ConsultationService _consultationService;
+        private readonly IConsultationService _consultationService;
 
-        public ConsultationsController(ConsultationService consultationService)
+        public ConsultationsController(IConsultationService consultationService)
         {
             _consultationService = consultationService;
         }
@@ -37,30 +39,36 @@ namespace GuardianPet.Controllers
         /// <summary>Lista os registros de consulta.</summary>
         /// <remarks>Exige autenticação Bearer JWT.</remarks>
         /// <returns>Lista de resultados, vazia quando não há correspondências.</returns>
+        /// <param name="options">Filtros combináveis; page >= 1, pageSize 1..100 (padrões 1/20). sortBy: id, consultationDate, status, userId, petId, veterinarianId; sortDirection asc/desc. Desempate por id; sem parâmetros mantém o array original.</param>
+        /// <param name="includeLinks">Opcional: true retorna recurso com data/links ou coleção com items/links; false preserva o JSON original.</param>
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(List<ConsultationResponseDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> FindAll()
+        public async Task<IActionResult> FindAll([FromQuery] ConsultationQueryDTO options, [FromQuery] bool includeLinks = false)
         {
-            var consultations = await _consultationService.FindAllAsync();
-            return Ok(consultations);
+            var consultations = await _consultationService.QueryAsync(options);
+            if (!includeLinks) return Ok(consultations);
+            return Ok(await Hateoas.CollectionAsync(this, consultations, options, item => item.Id,
+                () => _consultationService.CountAsync(options)));
         }
 
         /// <summary>Obtém um registro de consulta pelo identificador.</summary>
         /// <remarks>Exige autenticação Bearer JWT.</remarks>
         /// <param name="id">Identificador do registro de consulta.</param>
         /// <returns>Registro solicitado ou atualizado; 404 quando não encontrado.</returns>
+        /// <param name="includeLinks">Opcional: true retorna recurso com data/links ou coleção com items/links; false preserva o JSON original.</param>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(ConsultationResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> FindById(long id)
+        public async Task<IActionResult> FindById(long id, [FromQuery] bool includeLinks = false)
         {
             var consultation = await _consultationService.FindByIdAsync(id);
-            return Ok(consultation);
+            return includeLinks ? Ok(Hateoas.Resource(this, consultation)) : Ok(consultation);
         }
 
         /// <summary>Atualiza os dados de um registro de consulta.</summary>

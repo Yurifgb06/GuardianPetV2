@@ -3,6 +3,7 @@ using GuardianPet.Enums;
 using GuardianPet.Models;
 using GuardianPet.Observability;
 using Microsoft.EntityFrameworkCore;
+using GuardianPet.DTOs.Query;
 
 namespace GuardianPet.Repositories
 {
@@ -13,6 +14,38 @@ namespace GuardianPet.Repositories
         public PetRepository(AppDbContext context)
         {
             _context = context;
+        }
+
+        private IQueryable<Pet> FilteredQuery(PetQueryDTO options)
+        {
+            var query = _context.Pets.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(options.Species)) query = query.Where(x => x.Species.ToLower().Contains(options.Species.ToLower()));
+            if (options.PetSize.HasValue) query = query.Where(x => x.PetSize == options.PetSize.Value);
+            return query;
+        }
+
+        public Task<long> CountAsync(PetQueryDTO options)
+        {
+            options.EnsureValid();
+            return FilteredQuery(options).LongCountAsync();
+        }
+
+        public async Task<List<Pet>> QueryAsync(PetQueryDTO options)
+        {
+            options.EnsureValid();
+            using var activity = GuardianPetTelemetry.StartActivity("repository", "search", "pet");
+            var query = FilteredQuery(options);
+            query = options.SortBy?.ToLowerInvariant() switch
+            {
+                "name" => CollectionQuery.Apply(query, options, x => x.Name, x => x.Id),
+                "species" => CollectionQuery.Apply(query, options, x => x.Species, x => x.Id),
+                "breed" => CollectionQuery.Apply(query, options, x => x.Breed, x => x.Id),
+                "age" => CollectionQuery.Apply(query, options, x => x.Age, x => x.Id),
+                "weight" => CollectionQuery.Apply(query, options, x => x.Weight, x => x.Id),
+                "petsize" => CollectionQuery.Apply(query, options, x => x.PetSize, x => x.Id),
+                _ => CollectionQuery.Apply(query, options, x => x.Id, x => x.Id)
+            };
+            return await query.ToListAsync();
         }
 
         public async Task<List<Pet>> FindAllAsync()
@@ -29,16 +62,7 @@ namespace GuardianPet.Repositories
 
         public async Task<List<Pet>> SearchAsync(string? species, PetSizeEnum? petSize)
         {
-            using var activity = GuardianPetTelemetry.StartActivity("repository", "search", "pet");
-            var query = _context.Pets.AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(species))
-                query = query.Where(p => p.Species.ToLower().Contains(species.ToLower()));
-
-            if (petSize.HasValue)
-                query = query.Where(p => p.PetSize == petSize.Value);
-
-            return await query.ToListAsync();
+            return await QueryAsync(new PetQueryDTO { Species = species, PetSize = petSize });
         }
 
         public async Task<Pet> CreateAsync(Pet pet)

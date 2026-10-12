@@ -3,10 +3,11 @@ using GuardianPet.DTOs.Response;
 using GuardianPet.Exceptions;
 using GuardianPet.Models;
 using GuardianPet.Repositories;
+using GuardianPet.DTOs.Query;
 
 namespace GuardianPet.Services
 {
-    public class ConsultationService
+    public class ConsultationService : IConsultationService
     {
         private readonly IConsultationRepository _consultationRepository;
         private readonly IUserRepository _userRepository;
@@ -44,6 +45,22 @@ namespace GuardianPet.Services
 
             var savedConsultation = await _consultationRepository.CreateAsync(consultation);
             return ToResponse(savedConsultation);
+        }
+
+        public Task<long> CountAsync(ConsultationQueryDTO options)
+        {
+            options.EnsureValid();
+            return _consultationRepository.CountAsync(options);
+        }
+
+        public async Task<List<ConsultationResponseDTO>> QueryAsync(ConsultationQueryDTO options)
+        {
+            options.EnsureValid();
+            if (options.Page is null && options.PageSize is null && options.SortBy is null && options.SortDirection is null
+                && options.Status is null && options.UserId is null && options.PetId is null && options.VeterinarianId is null && options.DateFrom is null && options.DateTo is null)
+                return await FindAllAsync();
+            var records = await _consultationRepository.QueryAsync(options);
+            return records.Select(ToResponse).ToList();
         }
 
         public async Task<List<ConsultationResponseDTO>> FindAllAsync()

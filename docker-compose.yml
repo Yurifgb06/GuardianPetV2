@@ -1,4 +1,16 @@
 services:
+  mongodb:
+    # Local development/test service; opt in explicitly with --profile local-audit.
+    image: mongo:8.0
+    container_name: guardianpet-mongodb
+    profiles: ["local-audit"]
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-audit-data:/data/db
+    networks:
+      - guardianpet-network
+
   oracle-db:
     image: gvenzl/oracle-free:latest
     container_name: oracle-db
@@ -24,6 +36,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
       ASPNETCORE_URLS: http://+:8080
+      MongoDB__ConnectionString: "${MongoDB__ConnectionString:-mongodb://mongodb:27017}"
+      MongoDB__DatabaseName: "${MongoDB__DatabaseName:-guardianpet_audit}"
       ConnectionStrings__OracleConnection: "${ConnectionStrings__OracleConnection:-User Id=${APP_USER:-GuardianPet};Password=${APP_USER_PASSWORD:-123456};Data Source=oracle-db:1521/FREEPDB1}"
       Jwt__Key: "${Jwt__Key:-GuardianPet-Development-Only-Replace-This-Key-2026!}"
       Jwt__Issuer: "${Jwt__Issuer:-GuardianPet}"
@@ -35,6 +49,7 @@ services:
       - guardianpet-network
 
 volumes:
+  mongo-audit-data:
   oracle-data:
 
 networks:
