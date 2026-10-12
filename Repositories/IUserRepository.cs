@@ -1,9 +1,12 @@
 ﻿using GuardianPet.Models;
+using GuardianPet.DTOs.Query;
 
 namespace GuardianPet.Repositories
 {
     public interface IUserRepository
     {
+        Task<long> CountAsync(UserQueryDTO options);
+        Task<List<User>> QueryAsync(UserQueryDTO options);
         Task<List<User>> FindAllAsync();
         Task<User?> FindByIdAsync(long id);
         Task<User?> FindByEmailAsync(string email);

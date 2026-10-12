@@ -9,7 +9,7 @@ namespace GuardianPet.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public sealed class AuthController(AuthService authService) : ControllerBase
+public sealed class AuthController(IAuthService authService) : ControllerBase
 {
     /// <summary>Valida as credenciais e emite um token JWT para acesso à API.</summary>
     /// <remarks>Acesso anônimo; não exige token JWT.</remarks>

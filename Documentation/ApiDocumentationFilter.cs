@@ -1,4 +1,5 @@
 using GuardianPet.Exceptions;
+using GuardianPet.DTOs.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
@@ -18,6 +19,24 @@ public sealed class ApiDocumentationFilter : IDocumentFilter
             var operation = item.Operations?.FirstOrDefault(pair =>
                 string.Equals(pair.Key.Method, description.HttpMethod, StringComparison.OrdinalIgnoreCase)).Value;
             if (operation is null) continue;
+
+            if (description.HttpMethod == "GET" && description.ParameterDescriptions.Any(p => p.Name == "includeLinks"))
+            {
+                var legacyType = description.SupportedResponseTypes.First(r => r.StatusCode == 200).Type!;
+                var isCollection = legacyType.IsGenericType && legacyType.GetGenericTypeDefinition() == typeof(List<>);
+                var itemType = isCollection ? legacyType.GetGenericArguments()[0] : legacyType;
+                var linkedType = (isCollection ? typeof(CollectionResponse<>) : typeof(ResourceResponse<>)).MakeGenericType(itemType);
+                var example = isCollection
+                    ? """{"items":[{"data":{"id":1},"links":[{"rel":"self","href":"URL da rota por ID","method":"GET"}]}],"links":[{"rel":"self","href":"URL da coleção","method":"GET"}]}"""
+                    : """{"data":{"id":1},"links":[{"rel":"self","href":"URL do recurso","method":"GET"},{"rel":"collection","href":"URL da coleção","method":"GET"}]}""";
+                operation.Description += "\nincludeLinks=false (padrão): JSON original. Exemplo estrutural de includeLinks=true (data mantém todos os campos do DTO): " + example
+                    + "\nNa paginação, first/last estão disponíveis; prev/next apenas quando aplicáveis. Filtros e ordenação são preservados. Nenhum link de escrita é exposto.";
+                operation.Responses!["200"].Content!["application/json"].Schema = new OpenApiSchema
+                {
+                    OneOf = [context.SchemaGenerator.GenerateSchema(legacyType, context.SchemaRepository),
+                        context.SchemaGenerator.GenerateSchema(linkedType, context.SchemaRepository)]
+                };
+            }
 
             var metadata = description.ActionDescriptor.EndpointMetadata;
             var protectedEndpoint = metadata.OfType<IAuthorizeData>().Any()

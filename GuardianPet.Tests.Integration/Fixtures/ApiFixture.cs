@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using MongoDB.Driver;
 namespace GuardianPet.Tests.Integration.Fixtures;
 
 public sealed class ApiFixture : IAsyncLifetime
@@ -92,7 +93,20 @@ public sealed class ApiFixture : IAsyncLifetime
     {
         try
         {
-            if (Factory is not null) await Factory.DisposeAsync();
+            if (Factory is not null)
+            {
+                try
+                {
+                    if (!Regex.IsMatch(Factory.MongoDatabaseName, "^GPTEST_[a-f0-9]{32}$"))
+                        throw new InvalidOperationException("Unsafe MongoDB test database name.");
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    await Factory.Services.GetRequiredService<IMongoClient>()
+                        .DropDatabaseAsync(Factory.MongoDatabaseName, timeout.Token);
+                }
+                catch (MongoException) { }
+                catch (OperationCanceledException) { }
+                await Factory.DisposeAsync();
+            }
         }
         finally
         {

@@ -13,7 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 namespace GuardianPet.Services;
 
 public sealed class AuthService(
-    IUserRepository users, IPasswordHasher<User> hasher, IOptions<JwtOptions> options)
+    IUserRepository users, IPasswordHasher<User> hasher, IOptions<JwtOptions> options) : IAuthService
 {
     public async Task<LoginResponseDTO?> LoginAsync(LoginRequestDTO request)
     {
