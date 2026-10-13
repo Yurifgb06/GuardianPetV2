@@ -331,11 +331,3 @@ Validação da Sprint 4 em **12/10/2026**:
 | **Total** | **338** | **0** | **0** |
 
 Build com **0 erros e 0 avisos**. Esses resultados são de execução local; não representam cobertura percentual nem validação em Azure. Foram preservados os testes das etapas anteriores.
-
-## Checklist acadêmico e limites de escopo
-
-A matriz com requisitos, evidências e situações está em [docs/sprint4-checklist.md](docs/sprint4-checklist.md). Ela usa os critérios informados para esta Sprint; a rubrica oficial da disciplina não está no repositório e deve ser conferida antes da entrega.
-
-Pontos para considerar na avaliação: HATEOAS é opcional por includeLinks=true para preservar clientes antigos; readiness verifica Oracle, sem MongoDB; tracing manual é demonstrado no fluxo de Pets; auditoria é best-effort. Não há refresh token, revogação de JWT ou autorização por proprietário.
-
-Dockerfile, Compose e health checks fornecem uma base local para o trabalho de infraestrutura. Azure, ACR/ACI, pipelines, CI/CD e deploy pertencem ao colega de DevOps e não foram implementados nesta etapa. Não há alegação de publicação em nuvem.
